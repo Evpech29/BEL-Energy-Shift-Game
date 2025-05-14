@@ -73,6 +73,33 @@
       font-size: 1.2em;
       font-weight: bold;
     }
+    .cost-summary {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 1em;
+    }
+    button {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 1em;
+      border: none;
+      background-color: #3498db;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    @media (max-width: 768px) {
+      .game-container {
+        grid-template-columns: 1fr;
+      }
+      .timeline {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
   </style>
 </head>
 <body>
@@ -91,18 +118,21 @@
       <div class="appliance" draggable="true" data-kwh="2.5">🍳 <span>Electric Stove (2.5 kWh)</span></div>
       <div class="appliance" draggable="true" data-kwh="0.2">💻 <span>Computer (0.2 kWh)</span></div>
     </div>
-    <div class="timeline" id="timeline">
-      <!-- Time slots will be injected here -->
-    </div>
+    <div class="timeline" id="timeline"></div>
   </div>
   <div class="total-daily" id="daily-total">Total Daily Usage: 0.0 kWh</div>
+  <div class="cost-summary">
+    <div id="flat-rate">Flat Rate Cost (@$0.43): $0.00</div>
+    <div id="tou-rate">Time-of-Use Cost: $0.00</div>
+  </div>
+  <button onclick="resetGame()">Reset</button>
 
   <script>
     const timeLabels = [...Array.from({ length: 12 }, (_, i) => `${i + 1} AM`), ...Array.from({ length: 12 }, (_, i) => `${i + 1} PM`)];
     const timeline = document.getElementById('timeline');
 
     timeLabels.forEach((time, index) => {
-      const isOnPeak = index >= 13 && index <= 16; // 2PM to 5PM (14 to 17 index)
+      const isOnPeak = (index >= 12 && index <= 15) || (index >= 18 && index <= 20); // 1-4 PM and 7-9 PM
       const hourDiv = document.createElement('div');
       hourDiv.className = `hour-slot${isOnPeak ? ' on-peak' : ''}`;
       hourDiv.innerHTML = `
@@ -116,17 +146,26 @@
     const appliances = document.querySelectorAll('.appliance');
     appliances.forEach(appliance => {
       appliance.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', e.target.outerHTML);
-        e.dataTransfer.setData('kwh', e.target.dataset.kwh);
+        e.dataTransfer.setData('text/html', appliance.outerHTML);
+        e.dataTransfer.setData('kwh', appliance.dataset.kwh);
       });
     });
 
     function drop(event) {
       event.preventDefault();
-      const data = event.dataTransfer.getData('text/plain');
+      const html = event.dataTransfer.getData('text/html');
       const kwh = parseFloat(event.dataTransfer.getData('kwh'));
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const clone = temp.firstChild;
+      clone.addEventListener('click', () => {
+        clone.remove();
+        updateHourTotal(dropZone.closest('.hour-slot'));
+        updateDailyTotal();
+      });
+
       const dropZone = event.target.closest('.drop-zone');
-      dropZone.innerHTML += data;
+      dropZone.appendChild(clone);
       updateHourTotal(dropZone.closest('.hour-slot'));
       updateDailyTotal();
     }
@@ -142,11 +181,34 @@
 
     function updateDailyTotal() {
       let total = 0;
-      const kwhSpans = document.querySelectorAll('.hour-kwh');
-      kwhSpans.forEach(span => {
-        total += parseFloat(span.textContent);
+      let peakKwh = 0;
+      let offPeakKwh = 0;
+      const hourSlots = document.querySelectorAll('.hour-slot');
+
+      hourSlots.forEach((slot, index) => {
+        const kwh = parseFloat(slot.querySelector('.hour-kwh').textContent);
+        total += kwh;
+        if ((index >= 12 && index <= 15) || (index >= 18 && index <= 20)) {
+          peakKwh += kwh;
+        } else {
+          offPeakKwh += kwh;
+        }
       });
+
+      const flatRateCost = total * 0.43;
+      const touCost = (peakKwh * 0.45) + (offPeakKwh * 0.33);
+
       document.getElementById('daily-total').textContent = `Total Daily Usage: ${total.toFixed(2)} kWh`;
+      document.getElementById('flat-rate').textContent = `Flat Rate Cost (@$0.43): $${flatRateCost.toFixed(2)}`;
+      document.getElementById('tou-rate').textContent = `Time-of-Use Cost: $${touCost.toFixed(2)}`;
+    }
+
+    function resetGame() {
+      document.querySelectorAll('.drop-zone').forEach(zone => zone.innerHTML = '');
+      document.querySelectorAll('.hour-kwh').forEach(span => span.textContent = '0.0');
+      document.getElementById('daily-total').textContent = 'Total Daily Usage: 0.0 kWh';
+      document.getElementById('flat-rate').textContent = 'Flat Rate Cost (@$0.43): $0.00';
+      document.getElementById('tou-rate').textContent = 'Time-of-Use Cost: $0.00';
     }
   </script>
 </body>
