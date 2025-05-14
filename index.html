@@ -122,9 +122,14 @@
   </div>
   <div class="total-daily" id="daily-total">Total Daily Usage: 0.0 kWh</div>
   <div class="cost-summary">
-    <div id="flat-rate">Flat Rate Cost (@$0.43): $0.00</div>
-    <div id="tou-rate">Time-of-Use Cost: $0.00</div>
+  <div id="flat-rate">Flat Rate Cost (@$0.43): $0.00</div>
+  <div class="tou-breakdown">
+    <strong>Time-of-Use Pricing:</strong><br>
+    Off-Peak Usage: <span id="offpeak-kwh">0.00</span> kWh × $0.33 = $<span id="offpeak-cost">0.00</span><br>
+    On-Peak Usage: <span id="onpeak-kwh">0.00</span> kWh × $0.45 = $<span id="onpeak-cost">0.00</span><br>
+    <strong>Total TOU Cost:</strong> $<span id="tou-rate">0.00</span>
   </div>
+</div>
   <button onclick="resetGame()">Reset</button>
 
   <script>
