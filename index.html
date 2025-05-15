@@ -206,7 +206,38 @@
       updateHourTotal(dropZone.closest('.hour-slot'));
       updateDailyTotal();
     }
+// Mobile tap-to-place functionality
+let selectedAppliance = null;
 
+document.querySelectorAll('.appliance').forEach(appliance => {
+  appliance.addEventListener('click', () => {
+    selectedAppliance = appliance.cloneNode(true);
+    selectedAppliance.addEventListener('click', () => {
+      selectedAppliance.remove();
+      updateHourTotal(selectedAppliance.closest('.hour-slot'));
+      updateDailyTotal();
+    });
+  });
+});
+
+document.querySelectorAll('.drop-zone').forEach(zone => {
+  zone.addEventListener('click', () => {
+    if (selectedAppliance) {
+      const clone = selectedAppliance.cloneNode(true);
+      clone.addEventListener('click', () => {
+        clone.remove();
+        updateHourTotal(zone.closest('.hour-slot'));
+        updateDailyTotal();
+      });
+      zone.appendChild(clone);
+      updateHourTotal(zone.closest('.hour-slot'));
+      updateDailyTotal();
+      selectedAppliance = null; // reset after drop
+    }
+  });
+});
+
+    
     function updateHourTotal(hourSlot) {
       let total = 0;
       const icons = hourSlot.querySelectorAll('.drop-zone .appliance');
@@ -235,14 +266,14 @@
       });
 
       const flatRateCost = total * 0.43;
-      const touCost = (peakKwh * 0.45) + (offPeakKwh * 0.33);
+      const touCost = (peakKwh * 0.49) + (offPeakKwh * 0.33);
 
       document.getElementById('daily-total').textContent = `Total Daily Usage: ${total.toFixed(2)} kWh`;
       document.getElementById('flat-rate').textContent = `Flat Rate Cost (@$0.43): $${flatRateCost.toFixed(2)}`;
       document.getElementById('offpeak-kwh').textContent = offPeakKwh.toFixed(2);
       document.getElementById('offpeak-cost').textContent = (offPeakKwh * 0.33).toFixed(2);
       document.getElementById('onpeak-kwh').textContent = peakKwh.toFixed(2);
-      document.getElementById('onpeak-cost').textContent = (peakKwh * 0.45).toFixed(2);
+      document.getElementById('onpeak-cost').textContent = (peakKwh * 0.49).toFixed(2);
       document.getElementById('tou-rate').textContent = touCost.toFixed(2);
     }
 
