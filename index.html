@@ -54,9 +54,29 @@
       font-weight: bold;
     }
     .drop-zone {
-      min-height: 40px;
-      margin-top: 5px;
-    }
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.appliance-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 30px;
+}
+
+.tappable-space {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  cursor: pointer;
+  padding: 4px;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  background-color: #fefefe;
+}
     .energy-total {
       font-size: 0.9em;
       color: #555;
@@ -123,7 +143,7 @@
   </style>
 </head>
 <body>
-  <h1>BEL Energy Shift Game 1</h1>
+  <h1>BEL Energy Shift Game 3</h1>
   <div class="game-container">
   <div class="appliance-menu">
   <h2>Appliances</h2>
@@ -172,12 +192,16 @@ const barGraph = document.getElementById('barGraph');
 timeLabels.forEach((time, index) => {
   const isOnPeak = onPeakIndexes.includes(index);
   const hourDiv = document.createElement('div');
-  hourDiv.className = `hour-slot${isOnPeak ? ' on-peak' : ''}`;
-  hourDiv.innerHTML = `
-    <div class="hour-label">${time}</div>
-    <div class="drop-zone" ondragover="event.preventDefault()" ondrop="drop(event)"></div>
-    <div class="energy-total">Energy: <span class="hour-kwh">0.0</span> kWh</div>
-  `;
+hourDiv.className = `hour-slot${isOnPeak ? ' on-peak' : ''}`;
+hourDiv.innerHTML = `
+  <div class="hour-label">${time}</div>
+  <div class="drop-zone" ondragover="event.preventDefault()" ondrop="drop(event)">
+    <div class="appliance-container"></div>
+    <div class="tappable-space">+ Tap to Add</div>
+  </div>
+  <div class="energy-total">Energy: <span class="hour-kwh">0.0</span> kWh</div>
+`;
+
   timeline.appendChild(hourDiv);
 
   const bar = document.createElement('div');
@@ -243,8 +267,33 @@ function drop(event) {
 }
 // Tap-to-place for mobile or clicks
 document.querySelectorAll('.drop-zone').forEach(zone => {
+  const tappable = zone.querySelector('.tappable-space');
+  const container = zone.querySelector('.appliance-container');
+
+  // Allow placing by tapping the tappable-space
+  tappable.addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    if (selectedAppliance) {
+      const clone = selectedAppliance.cloneNode(true);
+      clone.classList.remove('selected');
+
+      clone.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clone.remove();
+        updateHourTotal(zone.closest('.hour-slot'));
+        updateDailyTotal();
+      });
+
+      container.appendChild(clone);
+      updateHourTotal(zone.closest('.hour-slot'));
+      updateDailyTotal();
+      clearSelected();
+    }
+  });
+
+  // Still allow tapping anywhere else in drop-zone (if no tappable-space clicked)
   zone.addEventListener('click', (e) => {
-    // Prevent triggering if the user tapped on an existing appliance to remove it
     if (e.target.closest('.appliance')) return;
 
     if (selectedAppliance) {
@@ -258,13 +307,14 @@ document.querySelectorAll('.drop-zone').forEach(zone => {
         updateDailyTotal();
       });
 
-      zone.appendChild(clone);
+      container.appendChild(clone);
       updateHourTotal(zone.closest('.hour-slot'));
       updateDailyTotal();
       clearSelected();
     }
   });
 });
+
 
 
 function updateHourTotal(hourSlot) {
