@@ -115,6 +115,11 @@
         grid-template-columns: repeat(3, 1fr);
       }
     }
+    .appliance.selected {
+  background-color: #d0ebff;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+}
   </style>
 </head>
 <body>
@@ -182,30 +187,48 @@
 
     const appliances = document.querySelectorAll('.appliance');
     appliances.forEach(appliance => {
-      appliance.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/html', appliance.outerHTML);
-        e.dataTransfer.setData('kwh', appliance.dataset.kwh);
-      });
-    });
+  appliance.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/html', appliance.outerHTML);
+    e.dataTransfer.setData('kwh', appliance.dataset.kwh);
+    appliance.classList.add('selected');
+    selectedAppliance = appliance;
+  });
 
-    function drop(event) {
-      event.preventDefault();
-      const html = event.dataTransfer.getData('text/html');
-      const kwh = parseFloat(event.dataTransfer.getData('kwh'));
-      const temp = document.createElement('div');
-      temp.innerHTML = html;
-      const clone = temp.firstChild;
-      clone.addEventListener('click', () => {
-        clone.remove();
-        updateHourTotal(dropZone.closest('.hour-slot'));
-        updateDailyTotal();
-      });
-
-      const dropZone = event.target.closest('.drop-zone');
-      dropZone.appendChild(clone);
-      updateHourTotal(dropZone.closest('.hour-slot'));
-      updateDailyTotal();
+  // New: handle tap/click to select
+  appliance.addEventListener('click', () => {
+    if (selectedAppliance) {
+      selectedAppliance.classList.remove('selected');
     }
+    appliance.classList.add('selected');
+    selectedAppliance = appliance;
+  });
+});
+   function drop(event) {
+  event.preventDefault();
+  const html = event.dataTransfer.getData('text/html');
+  const kwh = parseFloat(event.dataTransfer.getData('kwh'));
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  const clone = temp.firstChild;
+  clone.classList.remove('selected'); // Remove highlight from clone
+
+  clone.addEventListener('click', () => {
+    clone.remove();
+    updateHourTotal(dropZone.closest('.hour-slot'));
+    updateDailyTotal();
+  });
+
+  const dropZone = event.target.closest('.drop-zone');
+  dropZone.appendChild(clone);
+
+  if (selectedAppliance) {
+    selectedAppliance.classList.remove('selected'); // Remove highlight from original
+    selectedAppliance = null;
+  }
+
+  updateHourTotal(dropZone.closest('.hour-slot'));
+  updateDailyTotal();
+}
 // Mobile tap-to-place functionality
 let selectedAppliance = null;
 
@@ -232,7 +255,7 @@ document.querySelectorAll('.drop-zone').forEach(zone => {
       zone.appendChild(clone);
       updateHourTotal(zone.closest('.hour-slot'));
       updateDailyTotal();
-      selectedAppliance = null; // reset after drop
+     selectedAppliance = null; // reset after drop
     }
   });
 });
