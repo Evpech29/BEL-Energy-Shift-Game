@@ -1,3 +1,5 @@
+# Modified code as per user instructions — saved to a file for download
+modified_html_code = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -77,20 +79,21 @@
       margin-top: 10px;
       font-size: 1em;
     }
-    #bar-chart {
-      margin-top: 40px;
-      max-width: 100%;
+    .bar-graph {
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-end;
+      margin-top: 20px;
+      height: 150px;
     }
     .bar {
-      background-color: #3498db;
-      height: 24px;
-      margin: 2px 0;
-      transition: width 0.3s ease;
-      border-radius: 4px;
-      color: white;
-      text-align: right;
-      padding-right: 5px;
-      line-height: 24px;
+      width: 20px;
+      margin: 0 2px;
+      background-color: #33cc33;
+      transition: height 0.3s ease;
+    }
+    .bar.on-peak {
+      background-color: #ff9966;
     }
     button {
       display: block;
@@ -117,7 +120,7 @@
   </style>
 </head>
 <body>
-  <h1>Energy Shift Game</h1>
+  <h1>BEL Energy Shift Game</h1>
   <div class="game-container">
     <div class="appliance-menu">
       <h2>Appliances</h2>
@@ -132,8 +135,10 @@
       <div class="appliance" draggable="true" data-kwh="2.5">🍳 <span>Electric Stove (2.5 kWh)</span></div>
       <div class="appliance" draggable="true" data-kwh="0.2">💻 <span>Computer (0.2 kWh)</span></div>
       <div class="appliance" draggable="true" data-kwh="1.5">🧊 <span>Refrigerator (1.5 kWh)</span></div>
-      <div class="appliance" draggable="true" data-kwh="0.3">💡 <span>Lights (0.3 kWh)</span></div>
-      <div class="appliance" draggable="true" data-kwh="1.0">🔥 <span>Microwave (1.0 kWh)</span></div>
+      <div class="appliance" draggable="true" data-kwh="0.6">💡 <span>Lights (0.6 kWh)</span></div>
+      <div class="appliance" draggable="true" data-kwh="1.2">📶 <span>Microwave (1.2 kWh)</span></div>
+      <div class="appliance" draggable="true" data-kwh="2.0">🚿 <span>Electric Shower Head (2.0 kWh)</span></div>
+      <div class="appliance" draggable="true" data-kwh="0.3">📱 <span>Charging Devices (0.3 kWh)</span></div>
     </div>
     <div class="timeline" id="timeline"></div>
   </div>
@@ -148,23 +153,20 @@
       <strong>Total TOU Cost:</strong> $<span id="tou-rate">0.00</span>
     </div>
   </div>
-
-  <div id="bar-chart"></div>
+  <div class="bar-graph" id="barGraph"></div>
   <button onclick="resetGame()">Reset</button>
 
   <script>
     const timeLabels = [
-      "1 AM", "2 AM", "3 AM", "4 AM", "5 AM", "6 AM",
-      "7 AM", "8 AM", "9 AM", "10 AM", "11 AM", "12 PM",
-      "1 PM", "2 PM", "3 PM", "4 PM", "5 PM", "6 PM",
-      "7 PM", "8 PM", "9 PM", "10 PM", "11 PM", "12 AM"
+      '1 AM','2 AM','3 AM','4 AM','5 AM','6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM',
+      '1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM','12 AM'
     ];
-
+    const onPeakIndexes = [12,13,14,15,18,19,20]; // 1-4 PM and 7-9 PM
     const timeline = document.getElementById('timeline');
-    const barChart = document.getElementById('bar-chart');
+    const barGraph = document.getElementById('barGraph');
 
     timeLabels.forEach((time, index) => {
-      const isOnPeak = (index >= 12 && index <= 15) || (index >= 18 && index <= 20);
+      const isOnPeak = onPeakIndexes.includes(index);
       const hourDiv = document.createElement('div');
       hourDiv.className = `hour-slot${isOnPeak ? ' on-peak' : ''}`;
       hourDiv.innerHTML = `
@@ -174,13 +176,10 @@
       `;
       timeline.appendChild(hourDiv);
 
-      // Add bar chart entry
       const bar = document.createElement('div');
-      bar.className = 'bar';
-      bar.style.width = '0%';
-      bar.dataset.index = index;
-      bar.textContent = `${time}: 0.0 kWh`;
-      barChart.appendChild(bar);
+      bar.className = `bar${isOnPeak ? ' on-peak' : ''}`;
+      bar.style.height = '5px';
+      barGraph.appendChild(bar);
     });
 
     const appliances = document.querySelectorAll('.appliance');
@@ -229,16 +228,12 @@
       hourSlots.forEach((slot, index) => {
         const kwh = parseFloat(slot.querySelector('.hour-kwh').textContent);
         total += kwh;
-        if ((index >= 12 && index <= 15) || (index >= 18 && index <= 20)) {
+        bars[index].style.height = `${kwh * 20}px`;
+        if (onPeakIndexes.includes(index)) {
           peakKwh += kwh;
         } else {
           offPeakKwh += kwh;
         }
-
-        // Update chart
-        const bar = bars[index];
-        bar.style.width = `${kwh * 20}%`; // scale width
-        bar.textContent = `${timeLabels[index]}: ${kwh.toFixed(2)} kWh`;
       });
 
       const flatRateCost = total * 0.43;
@@ -247,8 +242,8 @@
       document.getElementById('daily-total').textContent = `Total Daily Usage: ${total.toFixed(2)} kWh`;
       document.getElementById('flat-rate').textContent = `Flat Rate Cost (@$0.43): $${flatRateCost.toFixed(2)}`;
       document.getElementById('offpeak-kwh').textContent = offPeakKwh.toFixed(2);
-      document.getElementById('onpeak-kwh').textContent = peakKwh.toFixed(2);
       document.getElementById('offpeak-cost').textContent = (offPeakKwh * 0.33).toFixed(2);
+      document.getElementById('onpeak-kwh').textContent = peakKwh.toFixed(2);
       document.getElementById('onpeak-cost').textContent = (peakKwh * 0.45).toFixed(2);
       document.getElementById('tou-rate').textContent = touCost.toFixed(2);
     }
@@ -256,18 +251,17 @@
     function resetGame() {
       document.querySelectorAll('.drop-zone').forEach(zone => zone.innerHTML = '');
       document.querySelectorAll('.hour-kwh').forEach(span => span.textContent = '0.0');
-      document.getElementById('daily-total').textContent = 'Total Daily Usage: 0.0 kWh';
-      document.getElementById('flat-rate').textContent = 'Flat Rate Cost (@$0.43): $0.00';
-      document.getElementById('offpeak-kwh').textContent = '0.00';
-      document.getElementById('onpeak-kwh').textContent = '0.00';
-      document.getElementById('offpeak-cost').textContent = '0.00';
-      document.getElementById('onpeak-cost').textContent = '0.00';
-      document.getElementById('tou-rate').textContent = '0.00';
-      document.querySelectorAll('.bar').forEach(bar => {
-        bar.style.width = '0%';
-        bar.textContent = `${timeLabels[bar.dataset.index]}: 0.0 kWh`;
-      });
+      document.querySelectorAll('.bar').forEach(bar => bar.style.height = '5px');
+      updateDailyTotal();
     }
   </script>
 </body>
 </html>
+"""
+
+# Save the file
+output_path = "/mnt/data/bel_energy_shift_game.html"
+with open(output_path, "w") as f:
+    f.write(modified_html_code)
+
+output_path
