@@ -123,7 +123,7 @@
   </style>
 </head>
 <body>
-  <h1>BEL Energy Shift Game 2</h1>
+  <h1>BEL Energy Shift Game 1</h1>
   <div class="game-container">
   <div class="appliance-menu">
   <h2>Appliances</h2>
@@ -244,15 +244,15 @@ function drop(event) {
 // Tap-to-place for mobile or clicks
 document.querySelectorAll('.drop-zone').forEach(zone => {
   zone.addEventListener('click', (e) => {
-    // Prevent click if user tapped an existing appliance
-    if (e.target.classList.contains('appliance')) return;
+    // Prevent triggering if the user tapped on an existing appliance to remove it
+    if (e.target.closest('.appliance')) return;
 
     if (selectedAppliance) {
       const clone = selectedAppliance.cloneNode(true);
       clone.classList.remove('selected');
 
       clone.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent parent drop-zone's click event
+        e.stopPropagation();
         clone.remove();
         updateHourTotal(zone.closest('.hour-slot'));
         updateDailyTotal();
@@ -265,6 +265,7 @@ document.querySelectorAll('.drop-zone').forEach(zone => {
     }
   });
 });
+
 
 function updateHourTotal(hourSlot) {
   let total = 0;
