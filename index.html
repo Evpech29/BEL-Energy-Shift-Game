@@ -158,154 +158,148 @@
   </div>
   <div class="bar-graph" id="barGraph"></div>
   <button onclick="resetGame()">Reset</button>
+ <script>
+const timeLabels = [
+  '1 AM','2 AM','3 AM','4 AM','5 AM','6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM',
+  '1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM','12 AM'
+];
+const onPeakIndexes = [12,13,14,15,18,19,20]; // 1-4 PM and 7-9 PM
+const timeline = document.getElementById('timeline');
+const barGraph = document.getElementById('barGraph');
 
-  <script>
-    const timeLabels = [
-      '1 AM','2 AM','3 AM','4 AM','5 AM','6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM',
-      '1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM','12 AM'
-    ];
-    const onPeakIndexes = [12,13,14,15,18,19,20]; // 1-4 PM and 7-9 PM
-    const timeline = document.getElementById('timeline');
-    const barGraph = document.getElementById('barGraph');
+timeLabels.forEach((time, index) => {
+  const isOnPeak = onPeakIndexes.includes(index);
+  const hourDiv = document.createElement('div');
+  hourDiv.className = `hour-slot${isOnPeak ? ' on-peak' : ''}`;
+  hourDiv.innerHTML = `
+    <div class="hour-label">${time}</div>
+    <div class="drop-zone" ondragover="event.preventDefault()" ondrop="drop(event)"></div>
+    <div class="energy-total">Energy: <span class="hour-kwh">0.0</span> kWh</div>
+  `;
+  timeline.appendChild(hourDiv);
 
-    timeLabels.forEach((time, index) => {
-      const isOnPeak = onPeakIndexes.includes(index);
-      const hourDiv = document.createElement('div');
-      hourDiv.className = `hour-slot${isOnPeak ? ' on-peak' : ''}`;
-      hourDiv.innerHTML = `
-        <div class="hour-label">${time}</div>
-        <div class="drop-zone" ondragover="event.preventDefault()" ondrop="drop(event)"></div>
-        <div class="energy-total">Energy: <span class="hour-kwh">0.0</span> kWh</div>
-      `;
-      timeline.appendChild(hourDiv);
+  const bar = document.createElement('div');
+  bar.className = `bar${isOnPeak ? ' on-peak' : ''}`;
+  bar.style.height = '5px';
+  barGraph.appendChild(bar);
+});
 
-      const bar = document.createElement('div');
-      bar.className = `bar${isOnPeak ? ' on-peak' : ''}`;
-      bar.style.height = '5px';
-      barGraph.appendChild(bar);
-    });
+let selectedAppliance = null;
 
-    const appliances = document.querySelectorAll('.appliance');
-    appliances.forEach(appliance => {
+// Add event listeners to menu appliances
+document.querySelectorAll('.appliance-menu .appliance').forEach(appliance => {
   appliance.addEventListener('dragstart', (e) => {
+    clearSelected();
+    selectedAppliance = appliance;
+    appliance.classList.add('selected');
     e.dataTransfer.setData('text/html', appliance.outerHTML);
     e.dataTransfer.setData('kwh', appliance.dataset.kwh);
-    appliance.classList.add('selected');
-    selectedAppliance = appliance;
   });
 
-  // New: handle tap/click to select
   appliance.addEventListener('click', () => {
-    if (selectedAppliance) {
-      selectedAppliance.classList.remove('selected');
-    }
+    clearSelected();
     appliance.classList.add('selected');
     selectedAppliance = appliance;
   });
 });
-   function drop(event) {
+
+// Remove selection highlight from all appliances
+function clearSelected() {
+  document.querySelectorAll('.appliance.selected').forEach(el => {
+    el.classList.remove('selected');
+  });
+  selectedAppliance = null;
+}
+
+// Drop handler
+function drop(event) {
   event.preventDefault();
   const html = event.dataTransfer.getData('text/html');
   const kwh = parseFloat(event.dataTransfer.getData('kwh'));
   const temp = document.createElement('div');
   temp.innerHTML = html;
   const clone = temp.firstChild;
-  clone.classList.remove('selected'); // Remove highlight from clone
+  clone.classList.remove('selected');
 
   clone.addEventListener('click', () => {
     clone.remove();
-    updateHourTotal(dropZone.closest('.hour-slot'));
+    updateHourTotal(clone.closest('.hour-slot'));
     updateDailyTotal();
   });
 
   const dropZone = event.target.closest('.drop-zone');
   dropZone.appendChild(clone);
 
-  if (selectedAppliance) {
-    selectedAppliance.classList.remove('selected'); // Remove highlight from original
-    selectedAppliance = null;
-  }
-
+  clearSelected();
   updateHourTotal(dropZone.closest('.hour-slot'));
   updateDailyTotal();
 }
-// Mobile tap-to-place functionality
-let selectedAppliance = null;
 
-document.querySelectorAll('.appliance').forEach(appliance => {
-  appliance.addEventListener('click', () => {
-    selectedAppliance = appliance.cloneNode(true);
-    selectedAppliance.addEventListener('click', () => {
-      selectedAppliance.remove();
-      updateHourTotal(selectedAppliance.closest('.hour-slot'));
-      updateDailyTotal();
-    });
-  });
-});
-
+// Tap-to-place for mobile or clicks
 document.querySelectorAll('.drop-zone').forEach(zone => {
   zone.addEventListener('click', () => {
     if (selectedAppliance) {
       const clone = selectedAppliance.cloneNode(true);
+      clone.classList.remove('selected');
+
       clone.addEventListener('click', () => {
         clone.remove();
         updateHourTotal(zone.closest('.hour-slot'));
         updateDailyTotal();
       });
+
       zone.appendChild(clone);
       updateHourTotal(zone.closest('.hour-slot'));
       updateDailyTotal();
-     selectedAppliance = null; // reset after drop
+      clearSelected();
     }
   });
 });
 
-    
-    function updateHourTotal(hourSlot) {
-      let total = 0;
-      const icons = hourSlot.querySelectorAll('.drop-zone .appliance');
-      icons.forEach(icon => {
-        total += parseFloat(icon.dataset.kwh || 0);
-      });
-      hourSlot.querySelector('.hour-kwh').textContent = total.toFixed(2);
+function updateHourTotal(hourSlot) {
+  let total = 0;
+  const icons = hourSlot.querySelectorAll('.drop-zone .appliance');
+  icons.forEach(icon => {
+    total += parseFloat(icon.dataset.kwh || 0);
+  });
+  hourSlot.querySelector('.hour-kwh').textContent = total.toFixed(2);
+}
+
+function updateDailyTotal() {
+  let total = 0;
+  let peakKwh = 0;
+  let offPeakKwh = 0;
+  const hourSlots = document.querySelectorAll('.hour-slot');
+  const bars = document.querySelectorAll('.bar');
+
+  hourSlots.forEach((slot, index) => {
+    const kwh = parseFloat(slot.querySelector('.hour-kwh').textContent);
+    total += kwh;
+    bars[index].style.height = `${kwh * 20}px`;
+    if (onPeakIndexes.includes(index)) {
+      peakKwh += kwh;
+    } else {
+      offPeakKwh += kwh;
     }
+  });
 
-    function updateDailyTotal() {
-      let total = 0;
-      let peakKwh = 0;
-      let offPeakKwh = 0;
-      const hourSlots = document.querySelectorAll('.hour-slot');
-      const bars = document.querySelectorAll('.bar');
+  document.getElementById('daily-total').textContent = `Total Daily Usage: ${total.toFixed(2)} kWh`;
 
-      hourSlots.forEach((slot, index) => {
-        const kwh = parseFloat(slot.querySelector('.hour-kwh').textContent);
-        total += kwh;
-        bars[index].style.height = `${kwh * 20}px`;
-        if (onPeakIndexes.includes(index)) {
-          peakKwh += kwh;
-        } else {
-          offPeakKwh += kwh;
-        }
-      });
+  document.getElementById('flat-rate').textContent = `Flat Rate Cost (@$0.43): $${(total * 0.43).toFixed(2)}`;
+  document.getElementById('offpeak-kwh').textContent = offPeakKwh.toFixed(2);
+  document.getElementById('onpeak-kwh').textContent = peakKwh.toFixed(2);
+  document.getElementById('offpeak-cost').textContent = (offPeakKwh * 0.33).toFixed(2);
+  document.getElementById('onpeak-cost').textContent = (peakKwh * 0.49).toFixed(2);
+  document.getElementById('tou-rate').textContent = ((offPeakKwh * 0.33) + (peakKwh * 0.49)).toFixed(2);
+}
 
-      const flatRateCost = total * 0.43;
-      const touCost = (peakKwh * 0.49) + (offPeakKwh * 0.33);
-
-      document.getElementById('daily-total').textContent = `Total Daily Usage: ${total.toFixed(2)} kWh`;
-      document.getElementById('flat-rate').textContent = `Flat Rate Cost (@$0.43): $${flatRateCost.toFixed(2)}`;
-      document.getElementById('offpeak-kwh').textContent = offPeakKwh.toFixed(2);
-      document.getElementById('offpeak-cost').textContent = (offPeakKwh * 0.33).toFixed(2);
-      document.getElementById('onpeak-kwh').textContent = peakKwh.toFixed(2);
-      document.getElementById('onpeak-cost').textContent = (peakKwh * 0.49).toFixed(2);
-      document.getElementById('tou-rate').textContent = touCost.toFixed(2);
-    }
-
-    function resetGame() {
-      document.querySelectorAll('.drop-zone').forEach(zone => zone.innerHTML = '');
-      document.querySelectorAll('.hour-kwh').forEach(span => span.textContent = '0.0');
-      document.querySelectorAll('.bar').forEach(bar => bar.style.height = '5px');
-      updateDailyTotal();
-    }
-  </script>
+function resetGame() {
+  document.querySelectorAll('.drop-zone').forEach(zone => zone.innerHTML = '');
+  document.querySelectorAll('.hour-kwh').forEach(kwh => kwh.textContent = '0.0');
+  document.querySelectorAll('.bar').forEach(bar => bar.style.height = '5px');
+  clearSelected();
+  updateDailyTotal();
+}
+</script>
 </body>
 </html>
